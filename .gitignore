@@ -1,0 +1,10 @@
+
+# Ignore Raw Data (Too big for GitHub)
+data/raw/
+*.zip
+
+# Ignore System Files
+__pycache__/
+*.DS_Store
+.ipynb_checkpoints/
+.env

@@ -1,0 +1,9 @@
+numpy
+pandas
+torch
+torchvision
+tqdm
+umap-learn
+hdbscan
+plotly
+matplotlib
