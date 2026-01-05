@@ -2,7 +2,7 @@
 # The Pathologist Uncertainty Auditor
 ### Mapping the Morphological Manifold of Breast Cancer Histopathology
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)]([[https://pathology-uncertainty-auditor.streamlit.app/](https://pathology-uncertainty-auditor-n8hj3hp7m2njcgopi8vbkc.streamlit.app/)]
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://pathology-uncertainty-auditor-n8hj3hp7m2njcgopi8vbkc.streamlit.app/)]
 
 ## 🩺 The Human Cost of Binary Labels
 In a hospital waiting room, a patient waits for a diagnosis. The difference between "Benign" (safe) and "Malignant" (cancer) determines everything—their treatment, their finances, their survival.
