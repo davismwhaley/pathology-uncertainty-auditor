@@ -9,58 +9,63 @@ from sklearn.neighbors import NearestNeighbors
 
 # --- CONFIGURATION ---
 st.set_page_config(page_title="Pathology Auditor", layout="wide")
-PROJECT_ROOT = Path.cwd()
-PROCESSED_DIR = PROJECT_ROOT / "data" / "processed"
-RESULTS_DIR = PROJECT_ROOT / "results"
 
-# --- DATA LOADING (Cached for Speed) ---
+# Fix for Cloud vs Local Paths
+# We look for the 'cloud_path' column we just created
+def get_image_path(row):
+    if 'cloud_path' in row:
+        path = row['cloud_path']
+        # If it's a relative path (starts with data/), it's likely in the repo
+        if str(path).startswith("data"):
+            return path
+    # Fallback to absolute path (local only)
+    return row['path']
+
+# --- DATA LOADING ---
 @st.cache_data
 def load_data():
-    # Load the Master Audit CSV
-    csv_path = RESULTS_DIR / "breakhis_manifold_audited.csv"
-    if not csv_path.exists():
-        st.error(f"❌ File not found: {{csv_path}}")
-        return None, None
+    results_dir = Path("results")
+    processed_dir = Path("data/processed")
 
+    # Load CSV
+    csv_path = results_dir / "breakhis_manifold_audited.csv"
+    if not csv_path.exists():
+        st.error("CSV not found.")
+        return None, None
     df = pd.read_csv(csv_path)
 
-    # Load the Features (for the Search Engine)
-    npy_path = PROCESSED_DIR / "resnet50_features.npy"
+    # Load Features
+    npy_path = processed_dir / "resnet50_features.npy"
     if not npy_path.exists():
-        st.error(f"❌ File not found: {{npy_path}}")
         return df, None
-
     features = np.load(npy_path)
+
     return df, features
 
-# Load everything
 df, features = load_data()
 
-# Initialize Search Engine
+# Helper to safely load image
+def safe_load_image(path):
+    if Path(path).exists():
+        return Image.open(path)
+    else:
+        # Return a black square placeholder if image is missing
+        return Image.new('RGB', (224, 224), color='lightgrey')
+
+# Initialize Search
 if features is not None:
     knn = NearestNeighbors(n_neighbors=6, metric='euclidean')
     knn.fit(features)
 
-# --- SIDEBAR ---
 st.sidebar.title("🔬 Pathology Auditor")
-st.sidebar.markdown("Mapping the **Ambiguous Manifold** of Breast Cancer.")
+page = st.sidebar.radio("Navigation", ["Manifold Dashboard", "Cluster Inspector (Demo)", "Search Tool (Demo)"])
 
-page = st.sidebar.radio("Navigation", ["Manifold Dashboard", "Cluster Inspector", "Image Search Tool"])
-
-# --- PAGE 1: THE MANIFOLD ---
 if page == "Manifold Dashboard":
     st.title("The Morphological Manifold")
-    st.markdown("""
-    This map represents **7,909 histology images** projected into 2D space.
-    *   **Dots:** Individual cancer slides.
-    *   **Colors:** Morphological Families (Clusters).
-    *   **Grey Dots:** The "Ambiguous Noise" (Cluster -1) — these images defy standard categorization.
-    """)
+    st.info("Note: For this Cloud Demo, only 'Cluster 53' images are fully loaded to save bandwidth.")
 
-    # Plotly Chart
     fig = px.scatter(
-        df, x='umap_x', y='umap_y', 
-        color='cluster_id', 
+        df, x='umap_x', y='umap_y', color='cluster_id',
         color_continuous_scale=px.colors.qualitative.G10,
         hover_data=['label', 'subtype', 'filename'],
         title="BreaKHis 400X: UMAP Projection"
@@ -68,90 +73,62 @@ if page == "Manifold Dashboard":
     fig.update_layout(height=800, template="plotly_dark")
     st.plotly_chart(fig, use_container_width=True)
 
-# --- PAGE 2: CLUSTER INSPECTOR ---
-elif page == "Cluster Inspector":
+elif page == "Cluster Inspector (Demo)":
     st.title("🧐 Cluster Inspector")
 
-    # Dropdown to pick a cluster
+    # Prioritize Cluster 53 for the demo
     cluster_ids = sorted(df['cluster_id'].unique())
-    # Default to 53 if it exists, else 0
-    default_idx = cluster_ids.index(53) if 53 in cluster_ids else 0
-    selected_cluster = st.selectbox("Select a Cluster ID:", cluster_ids, index=default_idx)
+    idx_53 = cluster_ids.index(53) if 53 in cluster_ids else 0
+    selected_cluster = st.selectbox("Select Cluster:", cluster_ids, index=idx_53)
 
-    # Filter Data
     subset = df[df['cluster_id'] == selected_cluster]
 
-    # Stats
-    n_total = len(subset)
-    n_benign = len(subset[subset['label'] == 'Benign'])
-    n_malignant = len(subset[subset['label'] == 'Malignant'])
-    purity = max(n_benign, n_malignant) / n_total
-
     col1, col2, col3 = st.columns(3)
-    col1.metric("Total Images", n_total)
-    col2.metric("Purity Score", f"{purity:.2%}")
-    col3.metric("Dominant Subtype", subset['subtype'].mode()[0])
+    col1.metric("Total Images", len(subset))
+    purity = max(len(subset[subset['label']=='Benign']), len(subset[subset['label']=='Malignant'])) / len(subset)
+    col2.metric("Purity", f"{purity:.2%}")
+    col3.metric("Subtype", subset['subtype'].mode()[0])
 
-    if purity < 0.9:
-        st.warning(f"⚠️ **High Conflict Zone:** This cluster is {n_benign} Benign and {n_malignant} Malignant.")
-    else:
-        st.success("✅ Morphologically Pure Cluster.")
-
-    # Gallery
-    st.subheader("Cluster Gallery")
-
-    # Sample images (Max 10)
-    sample_imgs = subset.sample(min(10, len(subset)))
-
+    st.subheader("Gallery (Available Images)")
     cols = st.columns(5)
-    for i, (idx, row) in enumerate(sample_imgs.iterrows()):
-        img_path = row['path']
-        try:
-            image = Image.open(img_path)
-            with cols[i % 5]:
-                st.image(image, caption=f"{row['label']}\n{row['subtype']}", use_column_width=True)
-        except:
-            st.write("Image load error")
 
-# --- PAGE 3: REVERSE IMAGE SEARCH ---
-elif page == "Image Search Tool":
+    # Iterate and show images only if they exist
+    shown_count = 0
+    for _, row in subset.iterrows():
+        img_path = get_image_path(row)
+        if Path(img_path).exists():
+            with cols[shown_count % 5]:
+                st.image(img_path, caption=row['label'])
+            shown_count += 1
+            if shown_count >= 10: break
+
+    if shown_count == 0:
+        st.warning("⚠️ No images for this cluster were uploaded to the Cloud Demo (to save space). Try Cluster 53!")
+
+elif page == "Search Tool (Demo)":
     st.title("🔎 Reverse Image Search")
-    st.markdown("Select a 'Query Image' to find its nearest morphological neighbors.")
 
-    # Random Query Button
-    if st.button("🎲 Pick Random Malignant Case"):
-        query_row = df[df['label'] == 'Malignant'].sample(1).iloc[0]
-        st.session_state['query_idx'] = query_row.name
+    if st.button("🎲 Random Malignant (Cluster 53)"):
+        # Pick from the DEMO set (Cluster 53) so it works
+        demo_candidates = df[(df['cluster_id'] == 53) & (df['label'] == 'Malignant')]
+        if not demo_candidates.empty:
+            st.session_state['q_idx'] = demo_candidates.sample(1).index[0]
 
-    if 'query_idx' in st.session_state:
-        idx = st.session_state['query_idx']
+    if 'q_idx' in st.session_state:
+        idx = st.session_state['q_idx']
         row = df.loc[idx]
 
-        # Run Search
-        query_feat = features[df.index.get_loc(idx)].reshape(1, -1)
-        distances, indices = knn.kneighbors(query_feat)
+        # Search
+        q_feat = features[df.index.get_loc(idx)].reshape(1, -1)
+        _, indices = knn.kneighbors(q_feat)
 
-        # Display Query
-        st.divider()
-        c1, c2 = st.columns([1, 2])
-        with c1:
-            st.image(row['path'], caption=f"QUERY: {row['label']} ({row['cluster_id']})", width=300)
+        path = get_image_path(row)
+        st.image(safe_load_image(path), caption="QUERY", width=200)
 
-        with c2:
-            st.write("### Nearest Neighbors")
-            cols = st.columns(5)
-            # Skip first (it's the query itself)
-            neighbor_indices = indices[0][1:] 
-            neighbor_dists = distances[0][1:]
-
-            for i, n_idx in enumerate(neighbor_indices):
-                # Map back to df index
-                n_row = df.iloc[n_idx]
-
-                # Color code
-                color = "🟢" if n_row['label'] == 'Benign' else "🔴"
-                if n_row['label'] != row['label']:
-                    color = "⚠️" # Conflict!
-
-                with cols[i]:
-                    st.image(n_row['path'], caption=f"{color} {n_row['label']}\nDist: {neighbor_dists[i]:.2f}")
+        st.write("Neighbors:")
+        cols = st.columns(5)
+        for i, n_idx in enumerate(indices[0][1:]):
+            n_row = df.iloc[n_idx]
+            n_path = get_image_path(n_row)
+            with cols[i]:
+                st.image(safe_load_image(n_path), caption=n_row['label'])
