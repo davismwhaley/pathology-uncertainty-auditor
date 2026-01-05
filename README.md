@@ -29,8 +29,3 @@ Medical taxonomies treat cancer as discrete categories (Benign vs. Malignant), b
     ```bash
     streamlit run app.py
     ```
-
-## 📂 Repository Structure
-*   `notebooks/`: Analysis and experimentation code.
-*   `app.py`: The interactive Pathology Dashboard.
-*   `results/`: Validation reports and Conflict Atlas data.

@@ -11,14 +11,16 @@ from sklearn.neighbors import NearestNeighbors
 st.set_page_config(page_title="Pathology Auditor", layout="wide")
 
 # Fix for Cloud vs Local Paths
-# We look for the 'cloud_path' column we just created
 def get_image_path(row):
     if 'cloud_path' in row:
         path = row['cloud_path']
-        # If it's a relative path (starts with data/), it's likely in the repo
-        if str(path).startswith("data"):
+        # If relative path exists (cloud or local), use it
+        if Path(path).exists():
             return path
-    # Fallback to absolute path (local only)
+        # If absolute path exists (local only), use it
+        if Path(row['path']).exists():
+            return row['path']
+    # Fallback
     return row['path']
 
 # --- DATA LOADING ---
@@ -46,10 +48,12 @@ df, features = load_data()
 
 # Helper to safely load image
 def safe_load_image(path):
-    if Path(path).exists():
-        return Image.open(path)
+    # Convert to Path object
+    p = Path(path)
+    if p.exists():
+        return Image.open(p)
     else:
-        # Return a black square placeholder if image is missing
+        # Return a placeholder if image is missing
         return Image.new('RGB', (224, 224), color='lightgrey')
 
 # Initialize Search
@@ -76,7 +80,6 @@ if page == "Manifold Dashboard":
 elif page == "Cluster Inspector (Demo)":
     st.title("🧐 Cluster Inspector")
 
-    # Prioritize Cluster 53 for the demo
     cluster_ids = sorted(df['cluster_id'].unique())
     idx_53 = cluster_ids.index(53) if 53 in cluster_ids else 0
     selected_cluster = st.selectbox("Select Cluster:", cluster_ids, index=idx_53)
@@ -89,27 +92,25 @@ elif page == "Cluster Inspector (Demo)":
     col2.metric("Purity", f"{purity:.2%}")
     col3.metric("Subtype", subset['subtype'].mode()[0])
 
-    st.subheader("Gallery (Available Images)")
+    st.subheader("Gallery")
     cols = st.columns(5)
 
-    # Iterate and show images only if they exist
     shown_count = 0
     for _, row in subset.iterrows():
         img_path = get_image_path(row)
         if Path(img_path).exists():
             with cols[shown_count % 5]:
-                st.image(img_path, caption=row['label'])
+                st.image(safe_load_image(img_path), caption=row['label'])
             shown_count += 1
             if shown_count >= 10: break
 
     if shown_count == 0:
-        st.warning("⚠️ No images for this cluster were uploaded to the Cloud Demo (to save space). Try Cluster 53!")
+        st.warning("⚠️ No images for this cluster were uploaded to the Cloud Demo. Try Cluster 53!")
 
 elif page == "Search Tool (Demo)":
     st.title("🔎 Reverse Image Search")
 
     if st.button("🎲 Random Malignant (Cluster 53)"):
-        # Pick from the DEMO set (Cluster 53) so it works
         demo_candidates = df[(df['cluster_id'] == 53) & (df['label'] == 'Malignant')]
         if not demo_candidates.empty:
             st.session_state['q_idx'] = demo_candidates.sample(1).index[0]
@@ -118,7 +119,6 @@ elif page == "Search Tool (Demo)":
         idx = st.session_state['q_idx']
         row = df.loc[idx]
 
-        # Search
         q_feat = features[df.index.get_loc(idx)].reshape(1, -1)
         _, indices = knn.kneighbors(q_feat)
 
