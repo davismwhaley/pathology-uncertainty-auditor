@@ -27,6 +27,8 @@ We audited the BreaKHis dataset using unsupervised manifold learning to see if t
 
 ![Manifold Projection](https://github.com/davismwhaley/pathology-uncertainty-auditor/blob/main/results/Screenshot%202026-01-05%20144940.png)
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://pathology-uncertainty-auditor-n8hj3hp7m2njcgopi8vbkc.streamlit.app/)
+
 ---
 
 ## 🚀 Why This Matters (Implications)
