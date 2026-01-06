@@ -23,7 +23,7 @@ I audited the BreaKHis dataset using unsupervised manifold learning to see if th
 *   **Cluster 53 (The Benign Mimic):** I isolated a specific sub-group of Mucinous Carcinoma (Malignant) that is morphologically indistinguishable from Benign Fibroadenoma ($Entropy \approx 0.998$). A doctor looking at these cells without a molecular test could easily be misled.
 
 **Visualizing cancer:**
-*Blue cells are Benign, Orange/Red cells are Malignant.*
+*Blue cells are Benign, other colored cells are Malignant.*
 
 ![Manifold Projection](https://github.com/davismwhaley/pathology-uncertainty-auditor/blob/main/results/Screenshot%202026-01-05%20144940.png)
 
