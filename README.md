@@ -36,7 +36,7 @@ I audited the BreaKHis dataset using unsupervised manifold learning to see if th
 A "False Positive" leads to unnecessary chemotherapy and trauma. A "False Negative" leads to untreated cancer. By identifying the "Ambiguous Manifold," we can flag these specific cases for **molecular testing** rather than relying on visual inspection alone.
 
 ### For "Trustworthy AI"
-Most Medical AI gives a diagnosis with 99% confidence, even when it is wrong. This project demonstrates a **Data-Centric** approach. Instead of forcing a decision, our system acts as a "Second Opinion," alerting the pathologist: *"Warning: This image falls into Cluster 53. It looks Malignant, but mathematically resembles Benign tissue. Please verify."*
+Most Medical AI gives a diagnosis with 99% confidence, even when it is wrong. This project demonstrates a **Data-Centric** approach. Instead of forcing a decision, this system acts as a "Second Opinion," alerting the pathologist: *"Warning: This image falls into Cluster 53. It looks Malignant, but mathematically resembles Benign tissue. Please verify."*
 
 *Below: The "Conflict Gallery." To the human eye, the benign and malignant samples in this cluster look nearly identical.*
 
