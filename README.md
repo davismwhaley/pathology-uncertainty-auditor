@@ -38,7 +38,7 @@ A "False Positive" leads to unnecessary chemotherapy and trauma. A "False Negati
 ### For "Trustworthy AI"
 Most Medical AI gives a diagnosis with 99% confidence, even when it is wrong. This project demonstrates a **Data-Centric** approach. Instead of forcing a decision, this system acts as a "Second Opinion," alerting the pathologist: *"Warning: This image falls into Cluster 53. It looks Malignant, but mathematically resembles Benign tissue. Please verify."*
 
-*Below: The "Conflict Gallery." To the human eye, the benign and malignant samples in this cluster look nearly identical.*
+*Below: To the human eye, the benign and malignant samples in this cluster look nearly identical.*
 
 ![Conflict Gallery](https://github.com/davismwhaley/pathology-uncertainty-auditor/blob/main/results/Screenshot%202026-01-05%20155943.jpg)
 
